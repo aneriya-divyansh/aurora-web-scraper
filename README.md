@@ -25,6 +25,10 @@ A comprehensive web scraping solution that combines multiple tools to handle Jav
 - **Proxy Support**: Optional proxy configuration for anonymity
 - **User-Configurable Pagination**: Choose number of pages to scrape
 - **Intelligent Fallback**: Automatic OCR prompting on failures or zero results
+- **Web Interface**: Modern, responsive web UI for easy configuration and monitoring
+- **Real-time Status Updates**: Live progress tracking and task management
+- **Task History**: View and manage previous scraping jobs
+- **Download Results**: Direct download of JSON results with timestamps
 
 ## 🛠️ Tools Combined
 
@@ -109,9 +113,21 @@ BACKEND_PROXY_URL=http://localhost:8000
 
 ## 📖 Usage
 
-### Starting the Backend Proxy Server
+### Web Interface (Recommended)
 
-First, start the backend proxy server for server-side scraping:
+The easiest way to use Aurora Web Scraper is through the web interface:
+
+```bash
+python start_aurora.py
+```
+
+This will start both the backend proxy server and the web interface:
+- **Frontend**: http://localhost:8080 - Modern web interface
+- **Backend**: http://localhost:8000 - API server
+
+### Starting the Backend Proxy Server (Manual)
+
+If you prefer to run components separately, start the backend proxy server:
 
 ```bash
 python backend_proxy.py
@@ -343,31 +359,6 @@ This will prompt for a URL and demonstrate:
 3. OCR fallback capabilities
 4. Error handling and recovery
 
-## 📝 Examples
-
-### E-commerce Product Extraction
-```python
-# Extract products from Flipkart
-result = await extractor.extract_products(
-    url="https://flipkart.com/dupattas",
-    max_pages=3
-)
-
-# Extract products from Amazon
-result = await extractor.extract_products(
-    url="https://amazon.com/s?k=laptops",
-    max_pages=2
-)
-```
-
-### Real Estate Listings
-```python
-# Extract property listings
-result = await extractor.extract_products(
-    url="https://housing.com/buy",
-    max_pages=1,
-    use_ocr_fallback=True
-)
 ```
 
 ## 🤝 Contributing
@@ -409,6 +400,14 @@ Stay updated with the latest features and improvements by checking the repositor
 
 ## 🚀 Quick Start
 
+### Option 1: Web Interface (Recommended)
+1. **Install dependencies**: `pip install -r requirements.txt`
+2. **Start Aurora Web Scraper**: `python start_aurora.py`
+3. **Open browser**: Go to http://localhost:8080
+4. **Enter URL and configure settings**
+5. **View results and download data**
+
+### Option 2: Command Line
 1. **Install dependencies**: `pip install -r requirements.txt`
 2. **Start backend proxy**: `python backend_proxy.py`
 3. **Run extractor**: `python universal_product_extractor.py`

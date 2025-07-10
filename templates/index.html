@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aurora Web Scraper</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .status-pending { color: #f59e0b; }
+        .status-running { color: #3b82f6; }
+        .status-completed { color: #10b981; }
+        .status-failed { color: #ef4444; }
+        .animate-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="gradient-bg text-white py-8">
+        <div class="container mx-auto px-4">
+            <div class="text-center">
+                <h1 class="text-4xl font-bold mb-2">
+                    <i class="fas fa-spider mr-3"></i>
+                    Aurora Web Scraper
+                </h1>
+                <p class="text-xl opacity-90">Universal Product Data Extraction with AI</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- Input Form -->
+        <div class="max-w-4xl mx-auto">
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-8 card-hover">
+                <h2 class="text-2xl font-bold mb-6 text-gray-800">
+                    <i class="fas fa-cog mr-2"></i>
+                    Scraping Configuration
+                </h2>
+                
+                <form id="scrapingForm" class="space-y-6">
+                    <div>
+                        <label for="url" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-link mr-2"></i>
+                            Website URL
+                        </label>
+                        <input 
+                            type="url" 
+                            id="url" 
+                            name="url" 
+                            required
+                            placeholder="https://example.com/products"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="maxPages" class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-layer-group mr-2"></i>
+                                Max Pages to Scrape
+                            </label>
+                            <input 
+                                type="number" 
+                                id="maxPages" 
+                                name="maxPages" 
+                                min="1" 
+                                max="50" 
+                                value="3"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-eye mr-2"></i>
+                                OCR Fallback
+                            </label>
+                            <div class="flex items-center">
+                                <input 
+                                    type="checkbox" 
+                                    id="useOcr" 
+                                    name="useOcr"
+                                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                >
+                                <label for="useOcr" class="ml-2 text-sm text-gray-700">
+                                    Enable OCR fallback for better extraction
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center">
+                        <button 
+                            type="submit" 
+                            id="startBtn"
+                            class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg transition duration-300 flex items-center"
+                        >
+                            <i class="fas fa-play mr-2"></i>
+                            Start Scraping
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Task Status -->
+            <div id="taskStatus" class="hidden bg-white rounded-lg shadow-lg p-6 mb-8">
+                <h3 class="text-xl font-bold mb-4 text-gray-800">
+                    <i class="fas fa-tasks mr-2"></i>
+                    Task Status
+                </h3>
+                <div id="statusContent" class="space-y-4">
+                    <!-- Status content will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Results -->
+            <div id="results" class="hidden bg-white rounded-lg shadow-lg p-6 mb-8">
+                <h3 class="text-xl font-bold mb-4 text-gray-800">
+                    <i class="fas fa-chart-bar mr-2"></i>
+                    Extraction Results
+                </h3>
+                <div id="resultsContent" class="space-y-4">
+                    <!-- Results content will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Task History -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-xl font-bold mb-4 text-gray-800">
+                    <i class="fas fa-history mr-2"></i>
+                    Task History
+                </h3>
+                <div id="taskHistory" class="space-y-3">
+                    <!-- Task history will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Loading Modal -->
+    <div id="loadingModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 max-w-md mx-4 text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <h3 class="text-lg font-semibold mb-2">Processing...</h3>
+            <p class="text-gray-600">Please wait while we extract data from the website.</p>
+        </div>
+    </div>
+
+    <script>
+        let currentTaskId = null;
+        let statusInterval = null;
+
+        // Form submission
+        document.getElementById('scrapingForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const data = {
+                url: formData.get('url'),
+                max_pages: parseInt(formData.get('maxPages')),
+                use_ocr: formData.get('useOcr') === 'on'
+            };
+
+            try {
+                showLoading();
+                
+                const response = await fetch('/api/start-scraping', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                
+                if (result.task_id) {
+                    currentTaskId = result.task_id;
+                    startStatusPolling();
+                    showTaskStatus();
+                }
+            } catch (error) {
+                console.error('Error starting scraping:', error);
+                alert('Error starting scraping task');
+            } finally {
+                hideLoading();
+            }
+        });
+
+        function showLoading() {
+            document.getElementById('loadingModal').classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingModal').classList.add('hidden');
+        }
+
+        function showTaskStatus() {
+            document.getElementById('taskStatus').classList.remove('hidden');
+        }
+
+        function startStatusPolling() {
+            if (statusInterval) {
+                clearInterval(statusInterval);
+            }
+            
+            statusInterval = setInterval(async () => {
+                if (currentTaskId) {
+                    await updateTaskStatus();
+                }
+            }, 2000);
+        }
+
+        async function updateTaskStatus() {
+            try {
+                const response = await fetch(`/api/task-status/${currentTaskId}`);
+                const status = await response.json();
+                
+                updateStatusDisplay(status);
+                
+                if (status.status === 'completed' || status.status === 'failed') {
+                    clearInterval(statusInterval);
+                    statusInterval = null;
+                    
+                    if (status.status === 'completed') {
+                        showResults(status);
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating status:', error);
+            }
+        }
+
+        function updateStatusDisplay(status) {
+            const statusContent = document.getElementById('statusContent');
+            
+            const statusIcon = {
+                'pending': 'fas fa-clock',
+                'running': 'fas fa-spinner fa-spin',
+                'completed': 'fas fa-check-circle',
+                'failed': 'fas fa-exclamation-circle'
+            }[status.status] || 'fas fa-question';
+
+            const statusColor = {
+                'pending': 'status-pending',
+                'running': 'status-running',
+                'completed': 'status-completed',
+                'failed': 'status-failed'
+            }[status.status] || '';
+
+            statusContent.innerHTML = `
+                <div class="border-l-4 border-blue-500 pl-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h4 class="font-semibold text-gray-800">Task: ${status.task_id}</h4>
+                            <p class="text-sm text-gray-600">${status.url}</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="flex items-center ${statusColor}">
+                                <i class="${statusIcon} mr-2"></i>
+                                <span class="font-medium">${status.status.toUpperCase()}</span>
+                            </div>
+                            ${status.duration ? `<p class="text-sm text-gray-500">Duration: ${status.duration}</p>` : ''}
+                        </div>
+                    </div>
+                    
+                    ${status.error ? `
+                        <div class="mt-3 p-3 bg-red-50 border border-red-200 rounded">
+                            <p class="text-red-700 text-sm"><i class="fas fa-exclamation-triangle mr-2"></i>${status.error}</p>
+                        </div>
+                    ` : ''}
+                    
+                    ${status.results ? `
+                        <div class="mt-3 p-3 bg-green-50 border border-green-200 rounded">
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                <div>
+                                    <span class="font-medium">Products:</span> ${status.results.total_products}
+                                </div>
+                                <div>
+                                    <span class="font-medium">Pages:</span> ${status.results.total_pages}
+                                </div>
+                                <div>
+                                    <span class="font-medium">Method:</span> ${status.results.extraction_method}
+                                </div>
+                                <div>
+                                    <span class="font-medium">OCR Used:</span> ${status.results.ocr_used ? 'Yes' : 'No'}
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function showResults(status) {
+            const results = document.getElementById('results');
+            const resultsContent = document.getElementById('resultsContent');
+            
+            results.classList.remove('hidden');
+            
+            resultsContent.innerHTML = `
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h4 class="font-semibold text-green-800">Extraction Completed Successfully!</h4>
+                            <p class="text-sm text-green-600">Found ${status.results.total_products} products across ${status.results.total_pages} pages</p>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button onclick="downloadResults('${currentTaskId}')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm">
+                                <i class="fas fa-download mr-1"></i>Download JSON
+                            </button>
+                            <button onclick="viewRawResults('${currentTaskId}')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm">
+                                <i class="fas fa-eye mr-1"></i>View Raw Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function downloadResults(taskId) {
+            try {
+                const response = await fetch(`/api/download-results/${taskId}`);
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `aurora_results_${Date.now()}.json`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            } catch (error) {
+                console.error('Error downloading results:', error);
+                alert('Error downloading results');
+            }
+        }
+
+        async function viewRawResults(taskId) {
+            try {
+                const response = await fetch(`/api/task-results/${taskId}`);
+                const results = await response.json();
+                
+                const modal = document.createElement('div');
+                modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                modal.innerHTML = `
+                    <div class="bg-white rounded-lg p-6 max-w-4xl mx-4 max-h-96 overflow-auto">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-semibold">Raw Results</h3>
+                            <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <pre class="text-sm bg-gray-100 p-4 rounded overflow-auto">${JSON.stringify(results, null, 2)}</pre>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            } catch (error) {
+                console.error('Error viewing results:', error);
+                alert('Error viewing results');
+            }
+        }
+
+        // Load task history on page load
+        async function loadTaskHistory() {
+            try {
+                const response = await fetch('/api/tasks');
+                const tasks = await response.json();
+                
+                const taskHistory = document.getElementById('taskHistory');
+                
+                if (tasks.length === 0) {
+                    taskHistory.innerHTML = '<p class="text-gray-500 text-center py-4">No tasks yet. Start your first scraping job above!</p>';
+                    return;
+                }
+                
+                taskHistory.innerHTML = tasks.map(task => `
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1">
+                                <h4 class="font-medium text-gray-800 truncate">${task.url}</h4>
+                                <p class="text-sm text-gray-500">Task ID: ${task.task_id}</p>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}">
+                                    ${task.status.toUpperCase()}
+                                </span>
+                                ${task.start_time ? `<span class="text-xs text-gray-500">${new Date(task.start_time).toLocaleString()}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading task history:', error);
+            }
+        }
+
+        function getStatusColor(status) {
+            const colors = {
+                'pending': 'bg-yellow-100 text-yellow-800',
+                'running': 'bg-blue-100 text-blue-800',
+                'completed': 'bg-green-100 text-green-800',
+                'failed': 'bg-red-100 text-red-800'
+            };
+            return colors[status] || 'bg-gray-100 text-gray-800';
+        }
+
+        // Load task history when page loads
+        document.addEventListener('DOMContentLoaded', loadTaskHistory);
+    </script>
+</body>
+</html> 

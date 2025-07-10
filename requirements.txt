@@ -11,4 +11,5 @@ aiohttp==3.9.1
 asyncio==3.4.3
 lxml==4.9.3
 selenium-stealth==1.0.6
-webdriver-manager==4.0.1 
+webdriver-manager==4.0.1
+flask==3.0.0 
