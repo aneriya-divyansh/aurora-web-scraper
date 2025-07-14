@@ -42,12 +42,12 @@ class AuroraScraper:
             print(f"Scraping page {page_count + 1}: {current_url}")
             
             try:
-                # Scrape the current page
+                # Scrape the current page with intelligent scrolling
                 page_data = await self.scraper.scrape_url(
                     current_url, 
                     method=method,
                     wait_for=wait_for,
-                    scroll_pages=scroll_pages
+                    scroll_pages=1  # Enable intelligent scrolling (1 triggers the new logic)
                 )
                 
                 # Extract content items

@@ -80,6 +80,11 @@ def index():
 def start_scraping():
     data = request.get_json()
     
+    # If infinite scrolling is selected, force OCR fallback
+    use_ocr = data.get('use_ocr', False)
+    if data.get('infinite_scroll', False):
+        use_ocr = True
+    
     # Generate unique task ID
     task_id = f"task_{int(time.time())}"
     
@@ -88,7 +93,7 @@ def start_scraping():
         task_id=task_id,
         url=data.get('url'),
         max_pages=int(data.get('max_pages', 1)),
-        use_ocr=data.get('use_ocr', False)
+        use_ocr=use_ocr
     )
     
     # Add to global tasks and queue
@@ -97,7 +102,8 @@ def start_scraping():
     
     return jsonify({
         'task_id': task_id,
-        'status': 'started'
+        'status': 'started',
+        'estimated_time': 120 if use_ocr else 30  # 2 mins for OCR
     })
 
 @app.route('/api/task-status/<task_id>')

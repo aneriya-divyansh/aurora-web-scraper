@@ -80,7 +80,7 @@ class WebScraper:
             
             context = await browser.new_context(
                 user_agent=self.ua.random,
-                viewport={'width': 1920, 'height': 1080},
+                viewport={'width': 1366, 'height': 768},
                 extra_http_headers={
                     'Accept-Language': 'en-US,en;q=0.9',
                     'Accept-Encoding': 'gzip, deflate, br',
@@ -128,21 +128,68 @@ class WebScraper:
                 await browser.close()
                 raise Exception(f"Playwright scraping failed: {str(e)}")
     
-    async def _handle_infinite_scroll(self, page, scroll_pages: int):
-        """Handle infinite scroll by scrolling down multiple times"""
-        for i in range(scroll_pages):
-            await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-            await page.wait_for_timeout(random.randint(2000, 4000))  # Random delay
-            
-            # Wait for new content to load
-            try:
-                await page.wait_for_function(
-                    "document.body.scrollHeight > arguments[0]",
-                    arg=await page.evaluate("document.body.scrollHeight"),
-                    timeout=5000
-                )
-            except:
-                break  # No more content to load
+    async def _handle_infinite_scroll(self, page, scroll_pages: int = 0):
+        """
+        Handle infinite scroll with screenshot capture:
+        - Take screenshot
+        - Scroll one page at a time
+        - Take screenshot after each scroll
+        - Wait 10 seconds only after the last scroll to check for new content
+        """
+        print("🔄 Starting intelligent infinite scroll with screenshots...")
+        
+        # Wait 5 seconds after initial load
+        await page.wait_for_timeout(5000)
+        # Initialize counters
+        scroll_count = 0
+        screenshots_taken = 0
+        # Take initial screenshot
+        screenshot_path = f"scroll_screenshot_{screenshots_taken:03d}.png"
+        await page.screenshot(path=screenshot_path, full_page=False)
+        print(f"📸 Screenshot {screenshots_taken}: {screenshot_path}")
+        screenshots_taken += 1
+        
+        while True:
+            # Scroll down by one viewport height (one page)
+            viewport_height = await page.evaluate("window.innerHeight")
+            current_scroll_position = await page.evaluate("window.pageYOffset")
+            new_scroll_position = current_scroll_position + viewport_height
+            await page.evaluate(f"window.scrollTo(0, {new_scroll_position})")
+            scroll_count += 1
+            print(f"📜 Scroll {scroll_count}: Scrolled to position {new_scroll_position}px")
+            # Wait 5 seconds for new content to load
+            await page.wait_for_timeout(5000)
+            # Take screenshot after scroll
+            screenshot_path = f"scroll_screenshot_{screenshots_taken:03d}.png"
+            await page.screenshot(path=screenshot_path, full_page=False)
+            print(f"📸 Screenshot {screenshots_taken}: {screenshot_path}")
+            screenshots_taken += 1
+            # Check if we've reached the bottom
+            new_height = await page.evaluate("document.body.scrollHeight")
+            current_scroll_y = await page.evaluate("window.pageYOffset")
+            viewport_height = await page.evaluate("window.innerHeight")
+            if current_scroll_y + viewport_height >= new_height:
+                print("⏳ Reached bottom of page, waiting 10 seconds for new content...")
+                await page.wait_for_timeout(10000)  # 10 seconds
+                # Check if new content has loaded
+                final_height = await page.evaluate("document.body.scrollHeight")
+                if final_height > new_height:
+                    print(f"✅ New content detected! Height increased from {new_height}px to {final_height}px")
+                    # Take one more screenshot of the new content
+                    screenshot_path = f"scroll_screenshot_{screenshots_taken:03d}.png"
+                    await page.screenshot(path=screenshot_path, full_page=False)
+                    print(f"📸 Screenshot {screenshots_taken}: {screenshot_path}")
+                    screenshots_taken += 1
+                else:
+                    print(f"🛑 No new content detected after 10-second wait")
+                    break
+            # Additional safety check - if we've scrolled too many times, stop
+            if scroll_count >= 50:  # Maximum 50 scrolls to prevent infinite loops
+                print("🛑 Stopping scroll: Reached maximum scroll limit (50)")
+                break
+        print(f"🎉 Scroll complete! Total scrolls: {scroll_count}")
+        print(f"📸 Total screenshots taken: {screenshots_taken}")
+        print(f"📏 Final page height: {await page.evaluate('document.body.scrollHeight')}px")
     
     async def _extract_structured_data(self, page) -> Dict[str, Any]:
         """Extract JSON-LD and other structured data"""
@@ -228,19 +275,82 @@ class WebScraper:
             driver.quit()
             raise Exception(f"Selenium scraping failed: {str(e)}")
     
-    def _handle_selenium_scroll(self, driver, scroll_pages: int):
-        """Handle infinite scroll with Selenium"""
-        for i in range(scroll_pages):
-            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(random.uniform(2, 4))
+    def _handle_selenium_scroll(self, driver, scroll_pages: int = 0):
+        """
+        Handle infinite scroll with Selenium using screenshot capture:
+        - Take screenshot
+        - Scroll one page at a time
+        - Take screenshot after each scroll
+        - Wait 10 seconds only after the last scroll to check for new content
+        """
+        print("🔄 Starting intelligent infinite scroll with Selenium screenshots...")
+        
+        # Get initial page height
+        initial_height = driver.execute_script("return document.body.scrollHeight")
+        print(f"📏 Initial page height: {initial_height}px")
+        
+        scroll_count = 0
+        screenshots_taken = 0
+        
+        # Take initial screenshot
+        screenshot_path = f"scroll_screenshot_{screenshots_taken:03d}.png"
+        driver.save_screenshot(screenshot_path)
+        print(f"📸 Screenshot {screenshots_taken}: {screenshot_path}")
+        screenshots_taken += 1
+        
+        while True:
+            # Get viewport height and current scroll position
+            viewport_height = driver.execute_script("return window.innerHeight")
+            current_scroll_position = driver.execute_script("return window.pageYOffset")
             
-            # Check if new content loaded
-            old_height = driver.execute_script("return document.body.scrollHeight")
-            time.sleep(2)
+            # Scroll down by one viewport height
+            new_scroll_position = current_scroll_position + viewport_height
+            driver.execute_script(f"window.scrollTo(0, {new_scroll_position});")
+            
+            scroll_count += 1
+            print(f"📜 Scroll {scroll_count}: Scrolled to position {new_scroll_position}px")
+            
+            # Take screenshot after scroll
+            screenshot_path = f"scroll_screenshot_{screenshots_taken:03d}.png"
+            driver.save_screenshot(screenshot_path)
+            print(f"📸 Screenshot {screenshots_taken}: {screenshot_path}")
+            screenshots_taken += 1
+            
+            # Check if we've reached the bottom
             new_height = driver.execute_script("return document.body.scrollHeight")
+            current_scroll_y = driver.execute_script("return window.pageYOffset")
+            viewport_height = driver.execute_script("return window.innerHeight")
             
-            if new_height == old_height:
+            # If we're at the bottom, wait 10 seconds to see if new content loads
+            if current_scroll_y + viewport_height >= new_height:
+                print("⏳ Reached bottom of page, waiting 10 seconds for new content...")
+                time.sleep(10)  # 10 seconds
+                
+                # Check if new content has loaded
+                final_height = driver.execute_script("return document.body.scrollHeight")
+                
+                if final_height > new_height:
+                    print(f"✅ New content detected! Height increased from {new_height}px to {final_height}px")
+                    # Take one more screenshot of the new content
+                    screenshot_path = f"scroll_screenshot_{screenshots_taken:03d}.png"
+                    driver.save_screenshot(screenshot_path)
+                    print(f"📸 Screenshot {screenshots_taken}: {screenshot_path}")
+                    screenshots_taken += 1
+                else:
+                    print(f"🛑 No new content detected after 10-second wait")
+                    break
+            else:
+                # Not at bottom yet, continue scrolling
+                print("📜 Continuing to next page...")
+            
+            # Additional safety check - if we've scrolled too many times, stop
+            if scroll_count >= 50:  # Maximum 50 scrolls to prevent infinite loops
+                print("🛑 Stopping scroll: Reached maximum scroll limit (50)")
                 break
+        
+        print(f"🎉 Scroll complete! Total scrolls: {scroll_count}")
+        print(f"📸 Total screenshots taken: {screenshots_taken}")
+        print(f"📏 Final page height: {driver.execute_script('return document.body.scrollHeight')}px")
     
     def _extract_selenium_structured_data(self, driver) -> Dict[str, Any]:
         """Extract structured data with Selenium"""

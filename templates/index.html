@@ -159,7 +159,8 @@
         <div class="bg-white rounded-lg p-8 max-w-md mx-4 text-center">
             <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
             <h3 class="text-lg font-semibold mb-2">Processing...</h3>
-            <p class="text-gray-600">Please wait while we extract data from the website.</p>
+            <p class="text-gray-600">OCR scraping may take up to <b>2 minutes</b>. Please do not close this tab.</p>
+            <div id="progressInfo" class="mt-4 text-blue-700 font-medium"></div>
         </div>
     </div>
 
@@ -234,6 +235,12 @@
                 const status = await response.json();
                 
                 updateStatusDisplay(status);
+                // Live progress for pagination
+                if (status.status === 'running' && status.progress) {
+                    document.getElementById('progressInfo').innerText = `Progress: Page/Scroll ${status.progress}`;
+                } else {
+                    document.getElementById('progressInfo').innerText = '';
+                }
                 
                 if (status.status === 'completed' || status.status === 'failed') {
                     clearInterval(statusInterval);
@@ -312,9 +319,19 @@
         function showResults(status) {
             const results = document.getElementById('results');
             const resultsContent = document.getElementById('resultsContent');
-            
             results.classList.remove('hidden');
-            
+            let tableHtml = '';
+            if (status.results && status.results.table_data && status.results.table_data.length > 0) {
+                // Render table
+                const columns = Object.keys(status.results.table_data[0]);
+                tableHtml = `<div class="overflow-x-auto mt-4"><table class="min-w-full bg-white border border-gray-200 rounded"><thead><tr>` +
+                    columns.map(col => `<th class="px-4 py-2 border-b">${col}</th>`).join('') +
+                    `</tr></thead><tbody>` +
+                    status.results.table_data.map(row => `<tr>` + columns.map(col => `<td class="px-4 py-2 border-b">${row[col]}</td>`).join('') + `</tr>`).join('') +
+                    `</tbody></table></div>`;
+            } else {
+                tableHtml = `<p class="text-gray-600 mt-4">No table data found in results.</p>`;
+            }
             resultsContent.innerHTML = `
                 <div class="bg-green-50 border border-green-200 rounded-lg p-4">
                     <div class="flex items-center justify-between">
@@ -331,6 +348,7 @@
                             </button>
                         </div>
                     </div>
+                    ${tableHtml}
                 </div>
             `;
         }

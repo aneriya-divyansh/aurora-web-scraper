@@ -246,8 +246,10 @@ class UniversalProductExtractor:
         
         try:
             # Use the backend proxy to take screenshot
+            # Use base URL for screenshot endpoint
+            base_url = self.proxy_url.replace('/api/scrape', '')
             response = requests.get(
-                f"{self.proxy_url}/screenshot", 
+                f"{base_url}/api/screenshot", 
                 params={"url": url}, 
                 timeout=60
             )
